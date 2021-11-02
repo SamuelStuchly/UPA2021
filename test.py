@@ -1,52 +1,55 @@
 import csv
-import json
 import pymongo
+import wget
+from os.path import exists
 
-db_string = "mongodb://localhost:27017"
+SOURCE_1_URL= "https://nrpzs.uzis.cz/res/file/export/export-sluzby-2021-10.csv"
+SOURCE_2_URL= "https://www.czso.cz/documents/62353418/143522504/130142-21data043021.csv/760fab9c-d079-4d3a-afed-59cbb639e37d?version=1.1"
 
-myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-mydb = myclient["test2"]
-print(myclient.list_database_names())
-mycol = mydb["customers"]
+DIR = "data/"
+CSVFILE1 = DIR + "data1.csv"
+CSVFILE2 = DIR + "data2.csv"
 
+DB_STRING = "mongodb://localhost:27017"
 
-# Decide the two file paths according to your
-# computer system
-csvFilePath = "data.csv"
-jsonFilePath = "data.json"
+DB_NAME= "test_db"
 
+CZ_ENCODING = 'ISO-8859-2'
+UTF = 'utf-8'
 
-
-# Function to convert a CSV to JSON
-# Takes the file paths as arguments
-def make_json(csvFilePath, jsonFilePath):
-    # create a dictionary
+def parse_csv(csvFilePath, delimeter,enc):
+    
     data = []
-    # Open a csv reader called DictReader
-    with open(csvFilePath, encoding='ISO-8859-1') as csvf:
-        csvReader = csv.DictReader(csvf,delimiter=";")
-        # Convert each row into a dictionary
-        # and add it to data
-        # count = 0
-        for rows in csvReader:
-            # print(rows)
-            # Assuming a column named 'No' to
-            # be the primary key
-            # key = rows['ZdravotnickeZarizeniId']
 
+    with open(csvFilePath, encoding=enc) as csvfile:
+        csvReader = csv.DictReader(csvfile,delimiter=delimeter)
+
+        for rows in csvReader:
             data.append(rows)
-            # count+=1
 
     return data
-    # # Open a json writer, and use the json.dumps()
-    # # function to dump data
-    # with open(jsonFilePath, 'w', encoding='ISO-8859-1') as jsonf:
-    # 	jsonf.write(json.dumps(data, indent=4))
 
 
-# # Call the make_json function
-data = make_json(csvFilePath, jsonFilePath)
+def download_data(url,path):
+    if not exists(path): 
+        wget.download(url, out=path)
 
-# print(data)
-x = mycol.insert_many(data)
-print(x.inserted_ids)
+
+if __name__ == "__main__":
+    download_data(SOURCE_1_URL,CSVFILE1)
+    download_data(SOURCE_2_URL,CSVFILE2)
+
+    myclient = pymongo.MongoClient(DB_STRING)
+    mydb = myclient[DB_NAME]
+
+    data1 = parse_csv(CSVFILE1,";",CZ_ENCODING)
+    data2 = parse_csv(CSVFILE2,",",UTF)
+
+    collection1 = mydb["collection1"]
+    collection2 = mydb["collection2"]
+
+    x = collection1.insert_many(data1)
+    print(x.inserted_ids)
+
+    y = collection2.insert_many(data2)
+    print(y.inserted_ids)
