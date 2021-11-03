@@ -12,7 +12,10 @@ CSVFILE2 = DIR + "data2.csv"
 
 DB_STRING = "mongodb://localhost:27017"
 
-DB_NAME= "test_db"
+COLLECTION1 = "poskytovateleZP"
+COLLECTION2 = "obyvatelstvo"
+
+DB_NAME = "upa"
 
 CZ_ENCODING = 'ISO-8859-2'
 UTF = 'utf-8'
@@ -34,7 +37,6 @@ def download_data(url,path):
     if not exists(path): 
         wget.download(url, out=path)
 
-
 if __name__ == "__main__":
     download_data(SOURCE_1_URL,CSVFILE1)
     download_data(SOURCE_2_URL,CSVFILE2)
@@ -45,11 +47,11 @@ if __name__ == "__main__":
     data1 = parse_csv(CSVFILE1,";",CZ_ENCODING)
     data2 = parse_csv(CSVFILE2,",",UTF)
 
-    collection1 = mydb["collection1"]
-    collection2 = mydb["collection2"]
+    col1 = mydb[COLLECTION1]
+    col2 = mydb[COLLECTION2]
 
-    x = collection1.insert_many(data1)
+    x = col1.insert_many(data1)
     print(x.inserted_ids)
 
-    y = collection2.insert_many(data2)
+    y = col2.insert_many(data2)
     print(y.inserted_ids)
