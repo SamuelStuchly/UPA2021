@@ -45,8 +45,9 @@ clean-data:
 clean-contrainer: stop-mongo 
 	$(ENGINE) container rm mongodb
 
+ZIP_NAME := "xtetur01_xstuch06_xlitwo00"
 archive:
-	zip -r upa.zip upa.py drop.py Makefile README.md dokumentace.pdf
+	zip -r $(ZIP_NAME).zip upa.py drop.py Makefile README.md dokumentace.pdf
 
 .PHONY: venv clean-contrainer clean clean-data run drop db stop-mongo start-mongo mongo clean-venv
 
