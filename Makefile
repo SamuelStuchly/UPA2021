@@ -7,7 +7,7 @@ endif
 
 VENV := venv
 
-all: mongo run db
+all: clean-data mongo run db
 
 $(VENV)/bin/activate: requirements.txt
 	python3 -m venv $(VENV)
@@ -33,18 +33,20 @@ stop-mongo:
 db:
 	$(ENGINE) exec -it mongodb mongosh
 
-clean: clean-venv clean-data clean-contrainer
+clean: clean-data clean-contrainer
 
 clean-venv:
 	rm -rf $(VENV)
 	rm -rf __pycache__
 	
 clean-data:
-	touch data/tmp
-	rm data/*
+	rm -rf data/
 
 clean-contrainer: stop-mongo 
 	$(ENGINE) container rm mongodb
+
+archive:
+	zip -r upa.zip upa.py drop.py Makefile README.md dokumentace.pdf
 
 .PHONY: venv clean-contrainer clean clean-data run drop db stop-mongo start-mongo mongo clean-venv
 
