@@ -1,7 +1,9 @@
 import csv
+from genericpath import isdir
 import pymongo
 import wget
 from os.path import exists
+from os import makedirs
 
 SOURCE_1_URL = "https://nrpzs.uzis.cz/res/file/export/export-sluzby-2021-10.csv"
 SOURCE_2_URL = "https://www.czso.cz/documents/62353418/143522504/130142-21data043021.csv/760fab9c-d079-4d3a-afed-59cbb639e37d?version=1.1"
@@ -63,14 +65,21 @@ def parse_csv(csvFilePath, delimeter, enc,restructure_func):
 
 
 def download_data(url, path):
-    if not exists(path):
-        wget.download(url, out=path)
+        if not exists(path):
+            wget.download(url, out=path)
+        else:
+            print("Skipping donwload. Using stored data.")
 
 
 if __name__ == "__main__":
+
+    if not exists(DIR) or not isdir(DIR):
+        makedirs(DIR)
+
     download_data(SOURCE_1_URL,CSVFILE1)
     download_data(SOURCE_2_URL,CSVFILE2)
 
+    
     myclient = pymongo.MongoClient(DB_STRING)
     mydb = myclient[DB_NAME]
 
@@ -81,7 +90,7 @@ if __name__ == "__main__":
     col2 = mydb[COLLECTION2]
 
     x = col1.insert_many(data1)
-    print(COLLECTION1 + " inserted!")
+    print("\n" + COLLECTION1 + " inserted!")
 
     y = col2.insert_many(data2)
     print(COLLECTION2 + " inserted!")
