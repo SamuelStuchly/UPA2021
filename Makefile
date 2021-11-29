@@ -42,7 +42,7 @@ clean-venv:
 clean-data:
 	rm -rf data/
 
-clean-contrainer: stop-mongo 
+clean-container: stop-mongo 
 	$(ENGINE) container rm mongodb
 
 ZIP_NAME := "xtetur01_xstuch06_xlitwo00"

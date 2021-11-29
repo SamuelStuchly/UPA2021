@@ -15,38 +15,36 @@ DB_NAME = "upa"
 
 CZ_ENCODING = 'ISO-8859-2'
 UTF = 'utf-8'
+CZ_ENCODING2 = 'windows-1250'
 
 
-if __name__ == "__main__":
-
-    myclient = pymongo.MongoClient(DB_STRING)
-    mydb = myclient[DB_NAME]
-
-    col1 = mydb[COLLECTION1.format("2021","10")]
-
-    result = col1.aggregate([
+def query_a1(collection):
+    file = "query-a1.csv"
+    result = collection.aggregate([
         {"$match":
             {"AdresaZarizeni.Kraj": "Jihomoravský kraj"}
         },
         {"$group":
             {"_id": "$Pece.OborPece", "count": {"$sum": 1}}
         },
-        {"$sort": {"count":-1}},
-        {"$match": {"_id": {"$ne":''}}},
+        {"$sort":
+            {"count":-1}
+        },
+        {"$match":
+            {"_id": {"$ne":''}}
+        },
         {"$limit": 15}
         ])
-    F_QUERY1 = "query-a1.csv"
-    with open(F_QUERY1, 'w', encoding=UTF) as f:
+    with open(file, 'w', encoding=UTF) as f:
         f.write("typ_poskytovatele,pocet\n")
         for i in result:
-            #print(i['_id'].encode().decode())
+            print(i['_id'].encode().decode())
             # TODO fix encoding?
             f.write(str(i['_id'])+","+str(i['count'])+"\n")
 
-    #### Task A2:
-    F_QUERY2 = "query-a2.csv"
-    #f.write("typ_poskytovatele,pocet\n")
-    with open(F_QUERY2, 'w') as f:
+def query_a2():
+    file = "query-a2.csv"
+    with open(file, 'w') as f:
         f.write("date,zubní lékařství,chirurgie,patologie,Fyzioterapeut,psychiatrie\n")
     for year in range(2019,2022,1):
         months = ['01', '04', '07', '10']
@@ -62,13 +60,14 @@ if __name__ == "__main__":
                 {"$sort": {"count":-1}},
                 ])
 
-            with open(F_QUERY2, 'a') as f:
-                f.write("{}-{},".format(year,month))
+            with open(file, 'a') as f:
+                f.write("{}-{}".format(year,month))
                 for i in result:
-                    f.write(str(i['count'])+",")
+                    f.write("," + str(i['count']))
                 f.write("\n")
 
-    #### Task B1:
+def query_b1(col1, col2):
+    file = "query-b1.csv"
     pipline = [
         {"$match":
             {"Pece.OborPece": "v\x9Aeobecné praktické lékařství"}
@@ -77,15 +76,14 @@ if __name__ == "__main__":
             {"_id": "$AdresaZarizeni.Kraj", "count": {"$sum": 1}}
         },
         {"$sort": {"count":-1}},
-        {"$match": {"_id": {"$ne":''}}}
-        ]
-    col1 = mydb[COLLECTION1.format("2021","10")]
+        {"$match":
+            {"_id": {"$ne":''}}
+        }]
     result = col1.aggregate(pipline)
     result_dict={}
     for i in result:
         result_dict.update({i['_id']: {"doctors": i['count'], "population": "null"}})
 
-    col2 = mydb[COLLECTION2]
     pipeline = [
     {"$match":
         # vezme obyvatele starsi 20 let (vek_kod), pohlavi jsou obe (proto je tam prazdny retezec)
@@ -101,13 +99,12 @@ if __name__ == "__main__":
         {"_id": "$kraj", "celkemObyvatel": {"$sum": {"$toInt": "$hodnota"}}}
     }
     ]
-    result2 = col2.aggregate(pipeline)
-    for i in result2:
+    result = col2.aggregate(pipeline)
+    for i in result:
         result_dict[i['_id']]["population"] = i['celkemObyvatel']
         # TODO zaokrouhlit na cela cisla?
         result_dict[i['_id']]["prs_per_doc"] = i['celkemObyvatel'] / result_dict[i['_id']]["doctors"]
-    F_QUERY3 = "query-b1.csv"
-    with open(F_QUERY3, 'w') as f:
+    with open(file, 'w') as f:
         f.write("kraj,vseob-doktoru,obyvatel,osob-na-lekare\n")
         for kraj in result_dict:
             f.write("{},{},{},{}\n".format(
@@ -116,3 +113,159 @@ if __name__ == "__main__":
                 result_dict[kraj]["population"],
                 result_dict[kraj]["prs_per_doc"]
             ))
+
+
+def query_custom1(col):
+    """
+    Cilem dotazu je zjisit jak se vyvijel pocet muzu a zen v Brne od roku 2010.
+    """
+    file = "query-custom1.csv"
+    # Get info about men
+    pipeline = [
+        {"$match":
+            {"vuzemi.vuzemi_cis": "101", "vek.vek_kod": "", "pohlavi.pohlavi_kod" : "1", "vuzemi.vuzemi_kod": "40711" }
+        },
+        {"$group":
+            {"_id": "$idhod", "hodnota": {"$first": "$hodnota"}, "datum": {"$first": "$casref_do"}}
+        },
+        {"$sort" :
+            { "datum" : -1 }
+        }]
+    result = col.aggregate(pipeline)
+    result_dict={}
+    for i in result:
+        result_dict.update({i['datum']: {"muzi": i['hodnota'], "zeny": "null"}})
+
+    # Get info about women
+    pipeline = [
+        {"$match":
+            {"vuzemi.vuzemi_cis": "101", "vek.vek_kod": "", "pohlavi.pohlavi_kod" : "2", "vuzemi.vuzemi_kod": "40711" }
+        },
+        {"$group":
+            {"_id": "$idhod", "hodnota": {"$first": "$hodnota"}, "datum": {"$first": "$casref_do"}}
+        },
+        {"$sort" :
+            { "datum" : -1 }
+        }]
+    result = col.aggregate(pipeline)
+    for i in result:
+        result_dict[i['datum']]["zeny"] = i['hodnota']
+    with open(file, 'w') as f:
+       f.write("datum,muzi,zeny\n")
+       for datum in result_dict:
+           f.write("{},{},{}\n".format(
+               datum,
+               result_dict[datum]["muzi"],
+               result_dict[datum]["zeny"],
+           ))
+
+
+def query_custom2(col1, col2):
+    """
+    Cilem dotazu je zjisit jak se menil pocet deti na pocet
+    detskych lekaru ve stredoceskem a jihomoravskem kraji
+    behem let 2019-2021.
+    """
+
+    file = "query-custom2.csv"
+    result_dict = {}
+    # Pocet detskych lekarstvi v kraji
+    pipeline = [
+        {"$match": 
+            { "$or" : [{"AdresaZarizeni.Kraj": "Středočeský kraj"},{"AdresaZarizeni.Kraj": "Jihomoravský kraj"}]}
+        },
+        {"$match": 
+            {"Pece.OborPece": "dětské lékařství"}
+        },
+        {"$group": 
+            {"_id": "$AdresaZarizeni.Kraj", "count": {"$sum": 1}}
+        }]
+    for year in range(2019,2022,1):
+        col1 = mydb[COLLECTION1.format(year,'01')]
+        result = col1.aggregate(pipeline)
+        #result_dict.update({"Středočeský kraj": {"2018-12-31": {"p_lekaru" : "null", "p_deti": "null"}, "2019-12-31": {"p_lekaru" : "null", "p_deti": "null"},
+        #                                        "2020-12-31": {"p_lekaru" : "null", "p_deti": "null"}}})
+        for i in result:
+            date = str(year-1)+"-12-31"
+            key = i['_id']+","+date
+            result_dict.update({key: { "p_lekaru" : i['count'], "p_deti": "null"}})
+
+    # Pocet deti do veku 15 let ve stredoceskem kraji
+    pipeline = [
+        {"$match":
+            {"vuzemi.vuzemi_cis": "100", "vek.vek_kod": {"$lte": "410010610015000"}, "pohlavi.pohlavi_kod" : "", "vuzemi.vuzemi_kod": "3026", "vek.vek_txt": {"$ne":''}, "casref_do": {"$gte": "2018-12-31"} }
+        },
+        {"$group": 
+            {"_id": "$idhod", "hodnota": {"$first": "$hodnota"},"kraj": {"$first": "$vuzemi.vuzemi_txt"},"datum": {"$first": "$casref_do"}}
+        },
+        {"$group": 
+            {"_id": "$datum", "celkem": {"$sum": {"$toInt": "$hodnota"}}}
+        },
+        {"$sort" : {"_id": -1}
+        }]
+
+    result = col2.aggregate(pipeline)
+    for i in result:
+        key = "Středočeský kraj,"+i['_id']
+        result_dict[key]["p_deti"] = i['celkem']
+    
+    # Pocet deti do veku 15 let v jihomoravskem kraji
+    pipeline = [
+        {"$match":
+            {"vuzemi.vuzemi_cis": "100", "vek.vek_kod": {"$lte": "410010610015000"}, "pohlavi.pohlavi_kod" : "", "vuzemi.vuzemi_kod": "3034", "vek.vek_txt": {"$ne":''}, "casref_do": {"$gte": "2018-12-31"} }
+        },
+        {"$group": 
+            {"_id": "$idhod", "hodnota": {"$first": "$hodnota"},"kraj": {"$first": "$vuzemi.vuzemi_txt"},"datum": {"$first": "$casref_do"}}
+        },
+        {"$group": 
+            {"_id": "$datum", "celkem": {"$sum": {"$toInt": "$hodnota"}}}
+        },
+        {"$sort" : {"_id": -1}
+        }]
+    result = col2.aggregate(pipeline)
+    for i in result:
+        key = "Jihomoravský kraj,"+i['_id']
+        result_dict[key]["p_deti"] = i['celkem']
+
+    with open(file, 'w') as f:
+        f.write("kraj,datum,pocet_deti,pocet_detskych_lekaru,pocet_deti_na_lekare\n")
+        for i in result_dict:
+            f.write("{},{},{},{}\n".format(
+                i,
+                result_dict[i]['p_deti'],
+                result_dict[i]['p_lekaru'],
+                result_dict[i]['p_deti'] / result_dict[i]['p_lekaru']
+            ))
+
+
+if __name__ == "__main__":
+
+    myclient = pymongo.MongoClient(DB_STRING)
+    mydb = myclient[DB_NAME]
+
+    col1 = mydb[COLLECTION1.format("2021","10")]
+    col2 = mydb[COLLECTION2]
+
+    #### Task A1:
+    #query_a1(col1)
+
+    #### Task A2:
+    #query_a2()
+
+    #### Task B1:
+    col1 = mydb[COLLECTION1.format("2021","01")]
+    #query_b1(col1, col2)
+
+    #### Vlastni dotaz 1
+    # Alda's output:
+    #jak se v Brně měnil poměr můžu a žen v historii
+    # Udělat spojnicový graf (x: quartal, y: poměrně můžu/žen)
+    col1 = mydb[COLLECTION1.format("2021","10")]
+    #query_custom1(col2)
+
+    #### Vlastni dotaz 2
+    # Zjistit jaky je pocet deti na jednoho detskeho lekare v JMK a SK
+    # a jak se tento pocet menil za posledni tri roky
+    # 
+    col1 = mydb[COLLECTION1.format("2021","01")]
+    query_custom2(col1,col2)
