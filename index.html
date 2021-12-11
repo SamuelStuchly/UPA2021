@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<head lang="cs">
+    <title>UPA</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./lib/jquery-csv.js"></script>
+
+    <style>
+        .chart-container {
+            position: relative;
+            height: 80vh;
+            width: 80vw;
+            margin: auto;
+        }
+
+        h1 {
+            margin: auto;
+        }
+
+    </style>
+
+    <script>
+        var dataGetJSON;
+        var labels = [],
+            dataGet = [];
+
+     
+        function getData(url) {
+            $.ajax({
+                url: url,
+                async: false,
+                success: function(csvd) {
+                    dataGetJSON = $.csv.toObjects(csvd);
+                    console.log(dataGetJSON);
+                },
+                
+                dataType: "text",
+                complete: function() {
+                    console.log("Done");
+                }
+            });
+        }
+
+        function barChart(name, label) {
+            for (var i = 0; i < dataGetJSON.length; i++) {
+                labels[i] = dataGetJSON[i].typ_poskytovatele;
+                dataGet[i] = parseInt(dataGetJSON[i].pocet);
+            }
+
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: dataGet,
+                    backgroundColor: 'rgba(116, 185, 255,1.0)',
+                    borderColor: 'rgba(9, 132, 227,1.0)',
+                    borderWidth: 3
+                }]
+            };
+            const config = {
+                type: 'bar',
+                data: data,
+                options: {
+                    layout: {
+                        padding: 35
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Dotaz A1'
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'Graf zobrazující počty poskytovatelů určitého oboru pro Brno a zbytek Jihomoravského kraje. Je vybrano 15 typů poskytovatelů.'
+                        }
+                    },
+                    scales: {
+                        xAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Obor'
+                            }
+                        },
+                        yAxes: {
+                            title: {
+                                display: true,
+                                text: 'Pocet lidi'
+                            }
+                        }
+                    }
+                }
+            };
+            const ctx = $(name);
+            const chart = new Chart(ctx, config);
+        }
+
+        function lineChart(name, labelsNam, col) {
+            var data;
+
+            for (var i = 0; i < labelsNam.length; i++) {
+                labels = [];
+                dataGet = [];
+
+                for (var j = 0; j < dataGetJSON.length; j++) {
+                    labels[j] = dataGetJSON[j].date;
+                    dataGet[j] = dataGetJSON[j][labelsNam[i]];
+                }
+
+                if (!i) {
+                    data = {
+                        labels: labels,
+                        datasets: []
+                    }
+                }
+
+                data.datasets.push({
+                    type: 'line',
+                    label: labelsNam[i],
+                    data: dataGet,
+                    fill: false,
+                    borderColor: col[i]
+                });
+            }
+
+            const ctx = $(name);
+            const chart = new Chart(ctx, {
+                data,
+                options: {
+                    layout: {
+                        padding: 35
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Dotaz A2'
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'Graf zobrazující historii počtu poskytovatelů v 5 zvolených oborech.'
+                        }
+                    },
+                    scales: {
+                        xAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Ctvrtleti'
+                            }
+                        },
+                        yAxes: {
+                            title: {
+                                display: true,
+                                text: 'Pocet lidi'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function combineChart(name, labelsNam, typeCh, col1, col2) {
+            var data;
+
+            dataGetJSON.sort(function(a, b) {
+                return a["osob-na-lekare"] - b["osob-na-lekare"];
+            });
+
+            for (var i = 0; i < labelsNam.length; i++) {
+                labels = [];
+                dataGet = [];
+
+                for (var j = 0; j < dataGetJSON.length; j++) {
+                    labels[j] = dataGetJSON[j].kraj;
+                    dataGet[j] = dataGetJSON[j][labelsNam[i]];
+                }
+
+                if (!i) {
+                    data = {
+                        labels: labels,
+                        datasets: []
+                    }
+                }
+                var yAx = ['R', 'L2', 'L1'];
+                var ord = ['3', '1', '2'];
+
+                if (typeCh[i] === "line") {
+                    data.datasets.push({
+                        type: 'line',
+                        label: labelsNam[i],
+                        yAxisID: yAx[i],
+                        data: dataGet,
+                        order: ord[i],
+                        fill: false,
+                        borderColor: 'rgba(253, 203, 110,1.0)'
+                    });
+                } else {
+                    data.datasets.push({
+                        type: 'bar',
+                        label: labelsNam[i],
+                        yAxisID: yAx[i],
+                        data: dataGet,
+                        order: ord[i],
+                        backgroundColor: col2[i],
+                        borderColor: col1[i],
+                        borderWidth: 3
+                    });
+                }
+            }
+
+            const ctx = $(name);
+            const chart = new Chart(ctx, {
+                data,
+                options: {
+                    layout: {
+                        padding: 35
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Dotaz B1'
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'žebříček krajů dle počtu obyvatel na jednoho praktického lékaře (obor všeobecné praktické lékařství). Graf zobrazuje pro každý kraj počet praktických lékařů v kraji, celkový počet obyvatel a počet obyvatel na jednoho lékaře.'
+                        }
+                    },
+                    scales: {
+                        xAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Kraje'
+                            }
+                        },
+                        R: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pocet obyvatel'
+                            }
+                        },
+                        L1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pocet doktoru'
+                            }
+                        },
+                        L2: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Pocet obyvatel na doktora'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function tripleSameChart(name, labelsNam, col1, col2) {
+            var data;
+
+            dataGetJSON.reverse();
+
+            for (var i = 0; i < labelsNam.length; i++) {
+                labels = [];
+                dataGet = [];
+
+                for (var j = 0; j < dataGetJSON.length; j++) {
+                    labels[j] = dataGetJSON[j].datum;
+                    dataGet[j] = dataGetJSON[j][labelsNam[i]];
+                }
+
+                if (!i) {
+                    data = {
+                        labels: labels,
+                        datasets: []
+                    }
+                }
+
+                var yAx = ['yAxes', 'yAxes', 'R'];
+
+                data.datasets.push({
+                    type: 'line',
+                    label: labelsNam[i],
+                    data: dataGet,
+                    yAxisID: yAx[i],
+                    backgroundColor: col2[i],
+                    borderColor: col1[i],
+                    borderWidth: 3
+                });
+            }
+
+            const ctx = $(name);
+            const chart = new Chart(ctx, {
+                data,
+                options: {
+                    layout: {
+                        padding: 35
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Vlastni dotaz 1'
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'Graf zobrazuje jak se menil pocet muzu a zen v jednotlivych letech v Brne a jejich pomer.'
+                        }
+                    },
+                    scales: {
+                        xAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Obdobi'
+                            }
+                        },
+                        yAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Pocet lidi'
+                            }
+                        },
+                        R: {
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pomer muzu a zen'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+
+</head>
+
+<body>
+    <div class="container-fluid" style="display: grid;">
+        <h1>UPA</h1>
+        <div class="chart-container">
+            <canvas id="chartA1"></canvas>
+            <?php header("Access-Control-Allow-Origin: *; ?>
+            <script>
+                getData("./query-a1.csv");
+                barChart('#chartA1', 'Lidi v oboru');
+
+            </script>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="chartA2"></canvas>
+            <script>
+                getData("./query-a2.csv");
+                var labelsNam = ["zubní lékařství", "chirurgie", "patologie", "Fyzioterapeut", "psychiatrie"];
+                var col = ['rgba(0, 184, 148,1.0)', 'rgba(0, 206, 201,1.0)', 'rgb(54, 162, 235)', 'rgba(108, 92, 231,1.0)', 'rgba(178, 190, 195,1.0)'];
+                lineChart('#chartA2', labelsNam, col);
+
+            </script>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="chartB1"></canvas>
+            <script>
+                getData("./query-b1.csv");
+
+                var labelsNam = ["obyvatel", "osob-na-lekare", "vseob-doktoru"];
+                var typeCh = ['bar', 'line', 'bar'];
+                var col1 = ['rgba(9, 132, 227,1.0)', '', 'rgba(0, 206, 201,1.0)'];
+                var col2 = ['rgba(116, 185, 255,1.0)', '', 'rgba(129, 236, 236,1.0)'];
+                combineChart('#chartB1', labelsNam, typeCh, col1, col2);
+
+            </script>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="chartCust1"></canvas>
+            <script>
+                getData("./query-custom1.csv");
+                var labelsNam = ["muzi", "zeny", "pomer"];
+                var col1 = ['rgba(9, 132, 227,1.0)', 'rgba(214, 48, 49,1.0)', 'rgba(99, 110, 114,1.0)'];
+                var col2 = ['rgba(116, 185, 255,1.0)', 'rgba(255, 118, 117,1.0)', 'rgba(178, 190, 195,1.0)'];
+                tripleSameChart('#chartCust1', labelsNam, col1, col2);
+
+            </script>
+        </div>
+    </div>
+</body>

@@ -38,7 +38,6 @@ def query_a1(collection):
     with open(file, 'w', encoding=UTF) as f:
         f.write("typ_poskytovatele,pocet\n")
         for i in result:
-            print(i['_id'].encode().decode())
             # TODO fix encoding?
             f.write(str(i['_id'])+","+str(i['count'])+"\n")
 
@@ -91,7 +90,6 @@ def query_b1(col1, col2):
     },
     {"$group":
         # group podle idhod, protoze se objevuji v databazi duplicitni hodnoty
-        # TODO zde asi neni treba si uchovavat 'vek.vek_txt'
         {"_id": "$idhod", "hodnota": {"$first": "$hodnota"},"vek": {"$first":"$vek.vek_txt"}, "kraj": {"$first": "$vuzemi.vuzemi_txt"}}
     },
     {"$group":
@@ -102,7 +100,6 @@ def query_b1(col1, col2):
     result = col2.aggregate(pipeline)
     for i in result:
         result_dict[i['_id']]["population"] = i['celkemObyvatel']
-        # TODO zaokrouhlit na cela cisla?
         result_dict[i['_id']]["prs_per_doc"] = i['celkemObyvatel'] / result_dict[i['_id']]["doctors"]
     with open(file, 'w') as f:
         f.write("kraj,vseob-doktoru,obyvatel,osob-na-lekare\n")
@@ -151,12 +148,13 @@ def query_custom1(col):
     for i in result:
         result_dict[i['datum']]["zeny"] = i['hodnota']
     with open(file, 'w') as f:
-       f.write("datum,muzi,zeny\n")
-       for datum in result_dict:
-           f.write("{},{},{}\n".format(
-               datum,
-               result_dict[datum]["muzi"],
-               result_dict[datum]["zeny"],
+        f.write("datum,muzi,zeny,pomer\n")
+        for datum in result_dict:
+            f.write("{},{},{},{}\n".format(
+                datum,
+                result_dict[datum]["muzi"],
+                result_dict[datum]["zeny"],
+                int(result_dict[datum]["muzi"])/int(result_dict[datum]["zeny"])
            ))
 
 
@@ -183,8 +181,7 @@ def query_custom2(col1, col2):
     for year in range(2019,2022,1):
         col1 = mydb[COLLECTION1.format(year,'01')]
         result = col1.aggregate(pipeline)
-        #result_dict.update({"Středočeský kraj": {"2018-12-31": {"p_lekaru" : "null", "p_deti": "null"}, "2019-12-31": {"p_lekaru" : "null", "p_deti": "null"},
-        #                                        "2020-12-31": {"p_lekaru" : "null", "p_deti": "null"}}})
+    
         for i in result:
             date = str(year-1)+"-12-31"
             key = i['_id']+","+date
@@ -237,6 +234,48 @@ def query_custom2(col1, col2):
                 result_dict[i]['p_deti'] / result_dict[i]['p_lekaru']
             ))
 
+def query_c(colStart):
+    file = "query-c.csv"
+
+    seznam_zarizeni = ['v\x9Aeobecné praktické lékařství', 'zubní lékařství', 'Fyzioterapeut',
+            'praktické lékařství pro děti a dorost', 'vnitřní lékařství', 'gynekologie a porodnictví',
+            'Zubní technik', 'praktické lékárenství', 'V\x9Aeobecná sestra', 'ortopedie a traumatologie pohybového ústrojí',
+            'chirurgie', 'rehabilitační a fyzikální medicína', 'psychiatrie', 'neurologie', 'oftalmologie', 'dermatovenerologie',
+            'endokrinologie a diabetologie', 'Klinický psycholog', 'anesteziologie a intenzivní medicína',
+            'otorinolaryngologie a chirurgie hlavy a krku'
+        ]
+
+    with open(file, 'w') as f:
+        f.write("obor")
+        for year in range(2019,2022,1):
+            months = ['01', '04', '07', '10']
+            for month in months:
+                f.write(","+str(year)+"-"+str(month))
+        f.write("\n")
+
+    for pece in seznam_zarizeni:
+        with open(file, 'a') as f:
+            f.write(str(pece))
+        for year in range(2019,2022,1):
+            months = ['01', '04', '07', '10']
+            for month in months:
+                col1 = mydb[COLLECTION1.format(year,month)]
+                result = col1.aggregate([
+                    {"$match":
+                        {"Pece.OborPece": pece}
+                    },
+                    {"$group":
+                        {"_id": "Pece.OborPece", "count": {"$sum": 1}}}
+                    ])
+
+                with open(file, 'a') as f:
+                    for i in result:
+                        f.write(","+str(i['count']))
+
+        with open(file, 'a') as f:
+            f.write("\n")
+
+
 
 if __name__ == "__main__":
 
@@ -247,25 +286,28 @@ if __name__ == "__main__":
     col2 = mydb[COLLECTION2]
 
     #### Task A1:
-    #query_a1(col1)
+    query_a1(col1)
 
     #### Task A2:
-    #query_a2()
+    query_a2()
 
     #### Task B1:
     col1 = mydb[COLLECTION1.format("2021","01")]
-    #query_b1(col1, col2)
+    query_b1(col1, col2)
 
     #### Vlastni dotaz 1
-    # Alda's output:
+    # Alda:
     #jak se v Brně měnil poměr můžu a žen v historii
     # Udělat spojnicový graf (x: quartal, y: poměrně můžu/žen)
     col1 = mydb[COLLECTION1.format("2021","10")]
-    #query_custom1(col2)
+    query_custom1(col2)
 
     #### Vlastni dotaz 2
     # Zjistit jaky je pocet deti na jednoho detskeho lekare v JMK a SK
     # a jak se tento pocet menil za posledni tri roky
-    # 
+    #
     col1 = mydb[COLLECTION1.format("2021","01")]
     query_custom2(col1,col2)
+
+    #### Dolovaci alg - C dotaz
+    query_c(col1)
