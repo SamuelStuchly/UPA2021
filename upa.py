@@ -4,17 +4,18 @@ import pymongo
 import wget
 from os.path import exists
 from os import makedirs
+import os
 
-SOURCE_1_URL = "https://nrpzs.uzis.cz/res/file/export/export-sluzby-2021-10.csv"
+SOURCE_1_URL = "https://nrpzs.uzis.cz/res/file/export/export-sluzby-{}-{}.csv"
 SOURCE_2_URL = "https://www.czso.cz/documents/62353418/143522504/130142-21data043021.csv/760fab9c-d079-4d3a-afed-59cbb639e37d?version=1.1"
 
 DIR = "data/"
-CSVFILE1 = DIR + "data1.csv"
+TEMPLATE_CSVFILE1 = DIR + "data1-{}-{}.csv"
 CSVFILE2 = DIR + "data2.csv"
 
 DB_STRING = "mongodb://localhost:27017"
 
-COLLECTION1 = "poskytovateleZP"
+COLLECTION1 = "poskytovateleZP-{}-{}"
 COLLECTION2 = "obyvatelstvo"
 
 DB_NAME = "upa"
@@ -76,21 +77,28 @@ if __name__ == "__main__":
     if not exists(DIR) or not isdir(DIR):
         makedirs(DIR)
 
-    download_data(SOURCE_1_URL,CSVFILE1)
-    download_data(SOURCE_2_URL,CSVFILE2)
-
-    
     myclient = pymongo.MongoClient(DB_STRING)
     mydb = myclient[DB_NAME]
 
-    data1 = parse_csv(CSVFILE1, ";", CZ_ENCODING,restructure_pos)
+    for year in range(2019,2022,1):
+        months = ['01','04', '07', '10']
+        for month in months:
+            CSVFILE1 = TEMPLATE_CSVFILE1.format(year, month)
+            download_data(SOURCE_1_URL.format(year, month),CSVFILE1)
+
+            data1 = parse_csv(CSVFILE1, ";", CZ_ENCODING,restructure_pos)
+
+            col1 = mydb[COLLECTION1.format(year, month)]
+
+            x = col1.insert_many(data1)
+            print("\n" + COLLECTION1.format(year, month) + " inserted!")
+
+
+    download_data(SOURCE_2_URL,CSVFILE2)
+
     data2 = parse_csv(CSVFILE2,",",UTF,restructure_oby)
 
-    col1 = mydb[COLLECTION1]
     col2 = mydb[COLLECTION2]
 
-    x = col1.insert_many(data1)
-    print("\n" + COLLECTION1 + " inserted!")
-
     y = col2.insert_many(data2)
-    print(COLLECTION2 + " inserted!")
+    print("\n" + COLLECTION2 + " inserted!")
