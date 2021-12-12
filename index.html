@@ -28,7 +28,6 @@
         var labels = [],
             dataGet = [];
 
-     
         function getData(url) {
             $.ajax({
                 url: url,
@@ -37,7 +36,6 @@
                     dataGetJSON = $.csv.toObjects(csvd);
                     console.log(dataGetJSON);
                 },
-                
                 dataType: "text",
                 complete: function() {
                     console.log("Done");
@@ -349,6 +347,113 @@
             });
         }
 
+        function fourCombineChart(name, labelsNam, typeCh, col1, col2, kraj) {
+            var data;
+
+            for (var i = 0; i < kraj.length; i++) {
+                for (var j = 0; j < labelsNam.length; j++) {
+                    var p = 0;
+                    labels = [];
+                    dataGet = [];
+
+                    for (var k = 0; k < dataGetJSON.length; k++) {
+                        if (dataGetJSON[k].kraj === kraj[i]) {
+                            labels[p] = dataGetJSON[k].datum;
+                            dataGet[p] = dataGetJSON[k][labelsNam[j]];
+                            p++;
+                        }
+                    }
+
+                    if (!i && !j) {
+                        data = {
+                            labels: labels,
+                            datasets: []
+                        }
+                    }
+
+                    var yAx = ['R1', 'R2', 'L'];
+                    var ord = ['3', '2', '1'];
+
+                    if (typeCh[j] === "line") {
+                        data.datasets.push({
+                            type: 'line',
+                            label: labelsNam[j] + " - " + kraj[i],
+                            yAxisID: yAx[j],
+                            data: dataGet,
+                            order: ord[j],
+                            fill: false,
+                            borderColor: col1[j + i * labelsNam.length]
+                        });
+                    } else {
+                        data.datasets.push({
+                            type: 'bar',
+                            label: labelsNam[j] + " - " + kraj[i],
+                            yAxisID: yAx[j],
+                            data: dataGet,
+                            order: ord[j],
+                            backgroundColor: col2[j + i * labelsNam.length],
+                            borderColor: col1[j + i * labelsNam.length],
+                            borderWidth: 3
+                        });
+                    }
+                }
+            }
+
+            const ctx = $(name);
+            const chart = new Chart(ctx, {
+                data,
+                options: {
+                    layout: {
+                        padding: 35
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Vlastni dotaz 2'
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'žebříček zobrazuje jaky je pocet deti na jednoho detskeho lekare v JMK a SK a jak se tento pocet menil za posledni tri roky.'
+                        }
+                    },
+                    scales: {
+                        xAxes: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Obdobi'
+                            }
+                        },
+                        R1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pocet deti'
+                            }
+                        },
+                        R2: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pocet lekaru'
+                            }
+                        },
+                        L: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Pocet deti na jednoho detskeho lekare'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
     </script>
 
 </head>
@@ -358,7 +463,6 @@
         <h1>UPA</h1>
         <div class="chart-container">
             <canvas id="chartA1"></canvas>
-            <?php header("Access-Control-Allow-Origin: *; ?>
             <script>
                 getData("./query-a1.csv");
                 barChart('#chartA1', 'Lidi v oboru');
@@ -399,6 +503,20 @@
                 var col1 = ['rgba(9, 132, 227,1.0)', 'rgba(214, 48, 49,1.0)', 'rgba(99, 110, 114,1.0)'];
                 var col2 = ['rgba(116, 185, 255,1.0)', 'rgba(255, 118, 117,1.0)', 'rgba(178, 190, 195,1.0)'];
                 tripleSameChart('#chartCust1', labelsNam, col1, col2);
+
+            </script>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="chartCust2"></canvas>
+            <script>
+                getData("./query-custom2.csv");
+                var labelsNam = ["pocet_deti", "pocet_detskych_lekaru", "pocet_deti_na_lekare"];
+                var kraj = ["Jihomoravský kraj", "Středočeský kraj"];
+                var typeCh = ['bar', 'bar', 'line'];
+                var col1 = ['rgba(9, 132, 227,1.0)', 'rgba(0, 184, 148,1.0)', 'rgba(178, 190, 195,1.0)', 'rgba(214, 48, 49,1.0)', 'rgba(253, 203, 110,1.0)', 'rgba(99, 110, 114,1.0)'];
+                var col2 = ['rgba(116, 185, 255,1.0)', 'rgba(85, 239, 196,1.0)', '', 'rgba(255, 118, 117,1.0)', 'rgba(255, 234, 167,1.0)', ''];
+                fourCombineChart('#chartCust2', labelsNam, typeCh, col1, col2, kraj);
 
             </script>
         </div>
