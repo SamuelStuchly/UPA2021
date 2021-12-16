@@ -267,10 +267,14 @@ def query_c(colStart):
                     {"$group":
                         {"_id": "Pece.OborPece", "count": {"$sum": 1}}}
                     ])
-
-                with open(file, 'a') as f:
-                    for i in result:
-                        f.write(","+str(i['count']))
+                # Handle empty result
+                if(result.alive is False):
+                    with open(file, 'a') as f:
+                        f.write("," + str(float("NaN")))
+                else:
+                    with open(file, 'a') as f:
+                        for i in result:
+                            f.write(","+str(i['count']))
 
         with open(file, 'a') as f:
             f.write("\n")
