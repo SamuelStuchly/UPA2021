@@ -47,12 +47,12 @@ To drop the database with inserted data.
 make drop
 ```
 ---
-###Part 2
+### Part 2
 To perform query and modification, and generate csv files:
 ```
 make part2
 ```
-#####Or
+##### Or
 to make queries and create csv files:
 ```
 make query
@@ -61,3 +61,10 @@ to then perform normalization and discretization:
 ```
 make modify
 ```
+### Show graphs locally
+to view the graphs locally it's necesary to have running www server, for example use:
+```
+python3 -m 'http.server'
+```
+then you can view the graphs in your browser (go to http://0.0.0.0:8000/).
+
