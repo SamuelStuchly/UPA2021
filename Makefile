@@ -18,6 +18,16 @@ venv: $(VENV)/bin/activate
 run: 
 	python3 upa.py
 
+part2:
+	python3 extract_data.py
+	python3 modify.py
+
+modify:
+	python3 modify.py
+
+query:
+	python3 extract_data.py
+
 drop: 
 	python3 drop.py
 
