@@ -46,3 +46,18 @@ To drop the database with inserted data.
 ```
 make drop
 ```
+---
+###Part 2
+To perform query and modification, and generate csv files:
+```
+make part2
+```
+#####Or
+to make queries and create csv files:
+```
+make query
+```
+to then perform normalization and discretization:
+```
+make modify
+```
